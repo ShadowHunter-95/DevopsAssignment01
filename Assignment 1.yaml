@@ -1,0 +1,10 @@
+Description: "Creating the EC2 instance with default security group "
+Resources:
+  # Creating the EC2 instance
+  HITTCompanyEC2Instance: 
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro  
+      KeyName: L00187650HITT_KEY # Given the my key pair to this EC2 instances 
+      ImageId: ami-00385a401487aefa4 # Given the valid Image ID for IE 
+      Region: eu-west-1

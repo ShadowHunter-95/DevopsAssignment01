@@ -8,3 +8,69 @@ Resources:
       KeyName: L00187650HITT_KEY # Given the my key pair to this EC2 instances 
       ImageId: ami-00385a401487aefa4 # Given the valid Image ID for IE 
       Region: eu-west-1
+
+Description: Creating EC2 instances for Public and private subset
+
+Resources:
+  HITTCompanyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 170.32.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  HITTCompanyInternetGateway: # Gateway internet for Public Subnet
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: HITTCompanyInternetGateway
+
+  HITTCompanyAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref HITTCompanyVPC
+      InternetGatewayId: !Ref HITTCompanyInternetGateway
+
+  # Public Subnet
+  HITTCompanyPublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref HITTCompanyVPC
+      CidrBlock: 170.16.1.0/16
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: PublicSubnet
+
+  # Private Subnet
+  HITTCompanyPrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref HITTCompanyVPC
+      CidrBlock: 170.16.2.0/17
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet
+
+  HITTCompanyPublicEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      KeyName: L00187650HITT_KEY
+      ImageId: ami-00385a401487aefa4
+      Region: eu-west-1
+
+  HITTCompanyPrivateEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro 
+      KeyName: L00187650HITT_KEY 
+      ImageId: ami-00385a401487aefa4 
+      Region: eu-west-1

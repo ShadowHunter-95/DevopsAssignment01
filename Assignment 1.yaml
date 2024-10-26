@@ -1,23 +1,15 @@
-Description: "Creating the EC2 instance with default security group "
-Resources:
-  # Creating the EC2 instance
-  HITTCompanyEC2Instance: 
-    Type: AWS::EC2::Instance
-    Properties:
-      InstanceType: t2.micro  
-      KeyName: L00187650HITT_KEY # Given the my key pair to this EC2 instances 
-      ImageId: ami-00385a401487aefa4 # Given the valid Image ID for IE 
-      Region: eu-west-1
-
-Description: Creating EC2 instances for Public and private subset
+Description: " "
 
 Resources:
   HITTCompanyVPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 170.32.0.0/16
+      CidrBlock: 10.0.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: HITTCompanyVPC
 
   HITTCompanyInternetGateway: # Gateway internet for Public Subnet
     Type: AWS::EC2::InternetGateway
@@ -37,10 +29,8 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref HITTCompanyVPC
-      CidrBlock: 170.16.1.0/16
-      AvailabilityZone: !Select
-        - 0
-        - !GetAZs ''
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -51,13 +41,104 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref HITTCompanyVPC
-      CidrBlock: 170.16.2.0/17
-      AvailabilityZone: !Select
-        - 0
-        - !GetAZs ''
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
       Tags:
         - Key: Name
           Value: PrivateSubnet
+
+  # Creating JumpBox Security Group
+  HITTCompanyJumpBoxEC2PublicSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref HITTCompanyVPC
+      GroupDescription: "Public Security Group allowing only SSH"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0        
+  
+  # Creating the Public Subnet Security Group
+  HITTCompanyPublicEC2PublicSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref HITTCompanyVPC
+      GroupDescription: "Public Security Group Regulating traffic from SSH, HTTP, and HTTPS"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref HITTCompanyJumpBoxEC2PublicSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0      
+
+  # Creating the Private Subnet Security Group        
+  HITTCompanyPrivateEC2PrivateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref HITTCompanyVPC
+      GroupDescription: "Allowing only SSH from JumpBox"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref HITTCompanyJumpBoxEC2PublicSecurityGroup
+
+  # Creating the Public Subnet Route Table
+  HITTCompanyPublicEC2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref HITTCompanyVPC
+      Tags:
+        - Key: Name
+          Value: HITTCompany-publicroutetable
+
+  HITTCompanyDefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: HITTCompanyAttachGateway
+    Properties:
+      RouteTableId: !Ref HITTCompanyPublicEC2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref  HITTCompanyInternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref HITTCompanyPublicEC2RouteTable
+      SubnetId: !Ref HITTCompanyPublicSubnet
+
+  # Creating the Private Subnet Route Table
+  HITTCompanyPrivateEC2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref HITTCompanyVPC
+
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref HITTCompanyPrivateEC2RouteTable
+      SubnetId: !Ref HITTCompanyPrivateSubnet
+    
+  # Jumpbox Instance block has been created
+  HITTCompanyJumpBoxEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      KeyName: L00187650HITT_KEY 
+      ImageId: ami-00385a401487aefa4
+      SubnetId: !Ref   HITTCompanyPublicSubnet
+      SecurityGroupIds: 
+        - !Ref HITTCompanyJumpBoxEC2PublicSecurityGroup
+      Tags:
+        - Key: Name
+          Value: HITTCompany-JB Public
 
   HITTCompanyPublicEC2Instance:
     Type: AWS::EC2::Instance
@@ -65,12 +146,22 @@ Resources:
       InstanceType: t2.micro
       KeyName: L00187650HITT_KEY
       ImageId: ami-00385a401487aefa4
-      Region: eu-west-1
+      SubnetId: !Ref HITTCompanyPublicSubnet
+      SecurityGroupIds: 
+        - !Ref HITTCompanyPublicEC2PublicSecurityGroup
+      Tags:
+        - Key: Name
+          Value: HITTCompany-PublicInstance
 
   HITTCompanyPrivateEC2Instance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t2.micro 
       KeyName: L00187650HITT_KEY 
-      ImageId: ami-00385a401487aefa4 
-      Region: eu-west-1
+      ImageId: ami-00385a401487aefa4
+      SubnetId: !Ref HITTCompanyPrivateSubnet
+      SecurityGroupIds: 
+        - !Ref HITTCompanyPrivateEC2PrivateSecurityGroup
+      Tags:
+        - Key: Name
+          Value: HITTCompany-PrivateInstance

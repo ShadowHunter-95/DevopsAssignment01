@@ -213,3 +213,41 @@ Resources:
       Tags:
         - Key: Name
           Value: HITTCompany-PrivateInstance
+
+Outputs:
+  VPCID:
+    Description: VPC ID
+    Value: !Ref HITTCompanyVPC
+
+   
+  PublicInstanceIP:
+    Description: Public Instance IP Address
+    Value: !GetAtt HITTCompanyPublicEC2Instance.PublicIp
+ 
+  PrivateInstanceIP:
+    Description: Private Instance IP Address
+    Value: !GetAtt HITTCompanyPrivateEC2Instance.PrivateIp
+ 
+  JumpboxInstanceIP:
+    Description: Jumpbox Instance IP Address
+    Value: !GetAtt HITTCompanyJumpBoxEC2Instance.PublicIp
+ 
+  PublicSubnet1ID:
+    Description: Public Subnet ID
+    Value: !Ref HITTCompanyPublicSubnet
+ 
+  PrivateSubnet1ID:
+    Description: Private Subnet ID
+    Value: !Ref HITTCompanyPrivateSubnet
+ 
+  JumpboxSGID:
+    Description: Jumpbox Security Group ID
+    Value: !Ref HITTCompanyJumpBoxEC2PublicSecurityGroup
+ 
+  PublicSGID:
+    Description: Public Security Group ID
+    Value: !Ref HITTCompanyPublicEC2PublicSecurityGroup
+ 
+  PrivateSGID:
+    Description: Private Security Group ID
+    Value: !Ref HITTCompanyPrivateEC2PrivateSecurityGroup

@@ -1,10 +1,58 @@
-Description: " "
+Description: "Setting up a VPC with public and private subnets, security groups, and EC2 instances by using the AWS cloudformation"
+
+Parameters:
+  HITTCompanyVPCCIDRRange:
+    Description: VPC IP Range for the HITT Company
+    Type: String
+    Default: 10.0.0.0/16
+
+  PublicSubnetCIDRRange:
+    Description: IP range for the Public Subnet
+    Type: String
+    Default: 10.0.1.0/24
+
+  PrivateSubnetCIDRRange:
+    Description: IP range for the Private Subnet
+    Type: String
+    Default: 10.0.2.0/24
+
+  AvailabilityZone:
+    Description: Availability Zone for the subnets
+    Type: AWS::EC2::AvailabilityZone::Name
+    ConstraintDescription: Specify an available for Availability Zone
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t3.micro
+      - t3.small
+      - t3.medium
+  KeyName:
+    Description: Name of an existing EC2 KeyPair for SSH access
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Must be the name of an existing EC2 KeyPair.
+    
+Mappings:
+  RegionMap:
+    eu-west-1:
+      AMI: ami-00385a401487aefa4
+    eu-west-2:
+      AMI: ami-0acc77abdfc7ed5a6
+    eu-west-3:
+      AMI: ami-00d81861317c2cc1f
+    eu-central-1:
+      AMI: ami-08ec94f928cf25a9d
+    eu-north-1:
+      AMI: ami-02db68a01488594c5
 
 Resources:
   HITTCompanyVPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 10.0.0.0/16
+      CidrBlock: !Ref HITTCompanyVPCCIDRRange #10.0.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
@@ -29,8 +77,8 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref HITTCompanyVPC
-      CidrBlock: 10.0.1.0/24
-      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PublicSubnetCIDRRange #10.0.1.0/24
+      AvailabilityZone: !Ref AvailabilityZone #!Select [0, !GetAZs '']
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -41,8 +89,8 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref HITTCompanyVPC
-      CidrBlock: 10.0.2.0/24
-      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PrivateSubnetCIDRRange #10.0.2.0/24
+      AvailabilityZone: !Ref AvailabilityZone #!Select [0, !GetAZs '']
       Tags:
         - Key: Name
           Value: PrivateSubnet
@@ -130,9 +178,9 @@ Resources:
   HITTCompanyJumpBoxEC2Instance:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.micro
-      KeyName: L00187650HITT_KEY 
-      ImageId: ami-00385a401487aefa4
+      InstanceType: !Ref InstanceType #t2.micro
+      KeyName: !Ref KeyName #L00187650HITT_KEY 
+      ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI] #ami-00385a401487aefa4
       SubnetId: !Ref   HITTCompanyPublicSubnet
       SecurityGroupIds: 
         - !Ref HITTCompanyJumpBoxEC2PublicSecurityGroup
@@ -143,9 +191,9 @@ Resources:
   HITTCompanyPublicEC2Instance:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.micro
-      KeyName: L00187650HITT_KEY
-      ImageId: ami-00385a401487aefa4
+      InstanceType: !Ref InstanceType #t2.micro
+      KeyName: !Ref KeyName #L00187650HITT_KEY
+      ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI] #ami-00385a401487aefa4
       SubnetId: !Ref HITTCompanyPublicSubnet
       SecurityGroupIds: 
         - !Ref HITTCompanyPublicEC2PublicSecurityGroup
@@ -156,9 +204,9 @@ Resources:
   HITTCompanyPrivateEC2Instance:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t2.micro 
-      KeyName: L00187650HITT_KEY 
-      ImageId: ami-00385a401487aefa4
+      InstanceType: !Ref InstanceType #t2.micro 
+      KeyName: !Ref KeyName #L00187650HITT_KEY 
+      ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI] #ami-00385a401487aefa4
       SubnetId: !Ref HITTCompanyPrivateSubnet
       SecurityGroupIds: 
         - !Ref HITTCompanyPrivateEC2PrivateSecurityGroup
